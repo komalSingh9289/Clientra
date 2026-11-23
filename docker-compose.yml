@@ -1,0 +1,48 @@
+# One command to run everything:   docker compose up --build
+#   frontend  http://localhost:5173
+#   backend   http://localhost:8080/api
+#   MySQL     localhost:3306 (data kept in the "mysql-data" volume)
+# Set real secrets first: copy .env.example to .env and edit it.
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-change-me-db}
+      MYSQL_DATABASE: clientra
+    volumes: [mysql-data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-change-me-db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    depends_on:
+      mysql: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql
+      DB_HOST: mysql
+      DB_NAME: clientra
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-change-me-db}
+      CLIENTRA_JWT_SECRET: ${CLIENTRA_JWT_SECRET:-docker-dev-secret-please-change-0123456789abcdef}
+      CLIENTRA_CORS_ORIGINS: http://localhost:5173
+      CLIENTRA_SEED_DEMO: ${CLIENTRA_SEED_DEMO:-true}
+      CLIENTRA_ADMIN_EMAIL: ${CLIENTRA_ADMIN_EMAIL:-admin@clientra.local}
+      CLIENTRA_ADMIN_PASSWORD: ${CLIENTRA_ADMIN_PASSWORD:-ChangeMe@12345}
+      CLIENTRA_AI_PROVIDER: ${CLIENTRA_AI_PROVIDER:-none}
+      CLIENTRA_AI_API_KEY: ${CLIENTRA_AI_API_KEY:-}
+      CLIENTRA_AI_MODEL: ${CLIENTRA_AI_MODEL:-gpt-4o-mini}
+    ports: ["8080:8080"]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api
+    depends_on: [backend]
+    ports: ["5173:80"]
+
+volumes:
+  mysql-data:

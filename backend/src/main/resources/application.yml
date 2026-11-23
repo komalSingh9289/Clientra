@@ -1,0 +1,71 @@
+# ------------------------------------------------------------------
+# Clientra configuration. Every secret/URL can be overridden by an
+# environment variable (the ${NAME:default} syntax), see README.md.
+# Default profile = H2 file database (no install needed).
+# Run with SPRING_PROFILES_ACTIVE=mysql for MySQL 8 (synopsis 6.2).
+# ------------------------------------------------------------------
+server:
+  port: 8080
+  forward-headers-strategy: framework      # honour X-Forwarded-* when behind an HTTPS proxy
+
+spring:
+  application:
+    name: clientra-backend
+  datasource:
+    url: jdbc:h2:file:./data/clientra;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update                      # creates/updates tables from the entities
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false      # Instants are sent as ISO-8601 strings (2026-01-31T10:15:00Z)
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+  mail:
+    host: ${MAIL_HOST:}                     # leave empty to disable the mail sender bean
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+clientra:
+  seed-demo-data: ${CLIENTRA_SEED_DEMO:true}   # load the demo company, users, leads... on an empty database
+  bootstrap-admin:                              # used only when seed-demo-data=false and the DB has no users
+    name: ${CLIENTRA_ADMIN_NAME:System Administrator}
+    email: ${CLIENTRA_ADMIN_EMAIL:admin@clientra.local}
+    password: ${CLIENTRA_ADMIN_PASSWORD:ChangeMe@12345}
+  jwt:
+    secret: ${CLIENTRA_JWT_SECRET:clientra-dev-only-secret-change-me-in-production-0123456789}
+    expiry-minutes: 60                          # synopsis 11.1
+  cors:
+    allowed-origins: ${CLIENTRA_CORS_ORIGINS:http://localhost:5173}
+  security:
+    require-https: ${CLIENTRA_REQUIRE_HTTPS:false}   # true in production (synopsis 11.4)
+    login-max-attempts: 5                       # synopsis 11.6: 5 attempts ...
+    login-window-minutes: 15                    # ... per IP per 15 minutes, then temporary block
+  ai:
+    provider: ${CLIENTRA_AI_PROVIDER:none}      # none | openai | gemini  (none = built-in rule-based engine)
+    api-key: ${CLIENTRA_AI_API_KEY:}
+    model: ${CLIENTRA_AI_MODEL:gpt-4o-mini}     # e.g. gpt-4, or gemini-1.5-flash for provider=gemini
+    base-url: ${CLIENTRA_AI_BASE_URL:https://api.openai.com/v1}
+  mail:
+    enabled: ${CLIENTRA_MAIL_ENABLED:false}
+    from: ${CLIENTRA_MAIL_FROM:no-reply@clientra.local}
+  scheduler:
+    reminder-poll-ms: 30000                     # how often due reminders are dispatched
+    overdue-after-hours: 24                     # second "overdue" e-mail nudge
+    digest-cron: "0 0 9 * * MON"                # weekly digest, Monday 09:00 IST
+
+logging:
+  level:
+    com.clientra: INFO
